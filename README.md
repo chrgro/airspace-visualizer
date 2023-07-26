@@ -1,5 +1,10 @@
 # Airspace Visualizer
 
+chrgro:
+Modified to be able to show Points of each airspace section, as well
+as clicking on them in sequence to generate new openair airspace definitions.
+
+Original:
 https://airspaces.bargen.dev/
 
 This webapplication can visualize airspaces in OpenAir format, for example as

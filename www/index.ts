@@ -38,6 +38,31 @@ function altitudeToText(altitude: Altitude): string {
     }
 }
 
+//def to_dms(dd):
+//    mnt,sec = divmod(dd*3600, 60)
+//    deg,mnt = divmod(mnt, 60)
+//    return map(int, (deg,mnt,sec))
+
+function r(val : number) : string {
+    return ('0' + Math.round(val).toString()).slice(-2)
+}
+
+function toDms(point : Point) : string {
+    const lat_sec = (point.lat*3600) % 60;
+    const lat_mnt_tmp = Math.floor((point.lat*3600)/60);
+
+    const lat_deg = Math.floor(lat_mnt_tmp/60);
+    const lat_mnt = lat_mnt_tmp % 60;
+
+    const lng_sec = (point.lng*3600) % 60;
+    const lng_mnt_tmp = Math.floor((point.lng*3600)/60);
+
+    const lng_deg = Math.floor(lng_mnt_tmp/60);
+    const lng_mnt = lng_mnt_tmp % 60;
+
+    return `${lat_deg}:${r(lat_mnt)}:${r(lat_sec)} N ${lng_deg}:${r(lng_mnt)}:${r(lng_sec)} E`
+}
+
 /**
  * Highlight an airspace on the mouseover event.
  */
@@ -58,6 +83,23 @@ function highlightAirspace(airspace: Airspace): L.LeafletMouseEventHandlerFn {
     };
 }
 
+function highlightPoint(point : any): L.LeafletMouseEventHandlerFn {
+    const name: HTMLElement = airspaceinfo.querySelector('.name');
+    const classification: HTMLElement = airspaceinfo.querySelector('.class');
+    const bounds: HTMLElement = airspaceinfo.querySelector('.bounds');
+    return (e: L.LeafletMouseEvent) => {
+        const polygon = e.target as any as L.Polyline;
+        polygon.setStyle({
+            weight: highlightedWeight,
+        });
+        
+        name.innerText = toDms(point); //`${point.lat} ${point.lng}`;
+        classification.innerText = "";
+        bounds.innerText += "\nDP " + toDms(point) ;
+        airspaceinfo.classList.remove('hidden');
+    };
+}
+
 /**
  * Reset highlights on the mouseout event.
  */
@@ -66,7 +108,7 @@ function resetHighlight(e: L.LeafletMouseEvent) {
     polygon.setStyle({
         weight: defaultWeight,
     });
-    airspaceinfo.classList.add('hidden');
+    //airspaceinfo.classList.add('hidden');
 }
 
 /**
@@ -142,10 +184,19 @@ function showAirspace(airspace: Airspace): L.Path {
                     color: color,
                 }),
             );
-            polygon.addEventListener('mouseover', highlightAirspace(airspace));
-            polygon.addEventListener('mouseout', resetHighlight);
-            polygon.addEventListener('click', zoomToAirspace);
-            polygon.addTo(map);
+            for (const point of airspace.geom.segments.filter(isPoint)) {
+                const marker = L.circleMarker([point.lat, point.lng]);
+                marker.addEventListener('click', highlightPoint(point));
+                //marker.addEventListener('mouseout', resetHighlight);
+                marker.addTo(map);
+            };
+            //polygon.addEventListener('mouseover', highlightAirspace(airspace));
+            //polygon.addEventListener('mouseout', resetHighlight);
+            if (airspace.class != "E") {
+                //polygon.addEventListener('click', zoomToAirspace);
+                polygon.addTo(map);
+                polygon.bringToBack()
+            }
             return polygon;
         case "Circle":
             const circle = L.circle(
@@ -224,7 +275,7 @@ function loadFile(files: FileList) {
 
 initDragAndDrop(mapdiv, dropzone, dropinfo, loadFile);
 
-const map = L.map('map').setView([46.76733810404278, 8.496828420038582], 6);
+const map = L.map('map').setView([62.26733810404278, 6.596828420038582], 7);
 
 // Add tiles
 L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/256/{z}/{x}/{y}?access_token={accessToken}', {
