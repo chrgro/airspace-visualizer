@@ -130,6 +130,17 @@ function showAirspace(airspace: Airspace): L.Path {
         default:
             color = 'grey';
     }
+
+    // Custom coloring for wave boxes
+    if (airspace.name.includes("Bjorli Wave") ||
+        airspace.name.includes("Lesja Wave") ||
+        airspace.name.includes("Dovre Wave")
+    ) {
+        color = '#1caf20'; //'#4caf50';
+    } else if (airspace.name.includes("Wave")) {
+        color = '#ff5722';
+    }
+
     switch (airspace.geom.type) {
         case "Polygon":
             const polygon = L.polygon(
@@ -224,7 +235,63 @@ function loadFile(files: FileList) {
 
 initDragAndDrop(mapdiv, dropzone, dropinfo, loadFile);
 
-const map = L.map('map').setView([46.76733810404278, 8.496828420038582], 6);
+async function createFile(){
+    let response = await fetch('/airspace/Norway-updated_airsport_areas-20230805.txt');
+    let data = await response.blob();
+    
+
+    //let uint8data = await blob2uint(data);
+   const bytes = new Uint8Array(await data.arrayBuffer());
+
+   // Process bytes
+   const result: Airspace[] = process_openair(bytes);
+   console.log('Opening default airspace:');
+
+   console.log('Data returned by WASM:', result);
+
+   if (result !== null) {
+        // Sort airspaces
+        result.sort((a1: Airspace, a2: Airspace) => {
+            // Polygons are usually larger, put them at the bottom
+            if (a1.geom.type === 'Polygon' && a2.geom.type === 'Circle') {
+                return -1;
+            } else if (a1.geom.type === 'Circle' && a2.geom.type === 'Polygon') {
+                return 1;
+            }
+
+            // Put larger circles at the bottom
+            if (a1.geom.type === 'Circle' && a2.geom.type === 'Circle') {
+                if (a1.geom.radius > a2.geom.radius) {
+                    return -1;
+                } else if (a1.geom.radius < a2.geom.radius) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+
+            return 0;
+        });
+
+        // Add airspaces to map
+        const paths = [];
+        for (const airspace of result) {
+            paths.push(showAirspace(airspace));
+        }
+
+        // Fit map to bounds
+        //const group = L.featureGroup(paths);
+        //map.fitBounds(group.getBounds());
+    } else {
+        alert('No airspaces could be found. Is it a valid OpenAir file?');
+    }
+
+}
+
+createFile();
+
+// Set default view to closeup of Bjorli
+const map = L.map('map').setView([62.1, 8.5], 8);
 
 // Add tiles
 L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/256/{z}/{x}/{y}?access_token={accessToken}', {
