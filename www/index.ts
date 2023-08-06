@@ -235,7 +235,7 @@ function loadFile(files: FileList) {
 
 initDragAndDrop(mapdiv, dropzone, dropinfo, loadFile);
 
-async function createFile(){
+async function addDefaultAirspace(){
     let response = await fetch('/airspace/Norway-updated_airsport_areas-20230805.txt');
     let data = await response.blob();
     
@@ -250,6 +250,16 @@ async function createFile(){
    console.log('Data returned by WASM:', result);
 
    if (result !== null) {
+        // Add a marker for bjorli
+        let marker = new L.Marker([62.235 , 8.245 ], {
+            icon: new L.DivIcon({
+                className: 'my-div-icon',
+                html: '<strong>ENLB</strong>'
+            })
+        });
+        marker.addTo(map);
+
+
         // Sort airspaces
         result.sort((a1: Airspace, a2: Airspace) => {
             // Polygons are usually larger, put them at the bottom
@@ -282,13 +292,14 @@ async function createFile(){
         // Fit map to bounds
         //const group = L.featureGroup(paths);
         //map.fitBounds(group.getBounds());
+
     } else {
         alert('No airspaces could be found. Is it a valid OpenAir file?');
     }
 
 }
 
-createFile();
+addDefaultAirspace();
 
 // Set default view to closeup of Bjorli
 const map = L.map('map').setView([62.1, 8.5], 8);
